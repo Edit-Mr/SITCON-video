@@ -1,0 +1,75 @@
+<!-- @format -->
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>影片播放</title>
+        <style>
+            body,
+            html {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                overflow: hidden;
+            }
+            video {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@1.0.0/dist/hls.min.js"></script>
+    </head>
+    <body>
+        <video id="videoPlayer" autoplay muted loop>
+            <source id="videoSource" type="application/x-mpegURL" />
+        </video>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const videoElement = document.getElementById("videoPlayer");
+                const sourceElement = document.getElementById("videoSource");
+                fetch("output.json")
+                    .then(response => response.json())
+                    .then(data => {
+                        const videos = data.videos;
+                        let index = 0;
+
+                        function playNext() {
+                            if (videos.length === 0) return;
+                            const videoSrc = videos[index].url;
+
+                            if (Hls.isSupported()) {
+                                const hls = new Hls();
+                                hls.loadSource(videoSrc);
+                                hls.attachMedia(videoElement);
+                                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                                    videoElement.play();
+                                });
+                            } else if (
+                                videoElement.canPlayType(
+                                    "application/vnd.apple.mpegurl"
+                                )
+                            ) {
+                                // iOS Safari 等瀏覽器直接支持 HLS
+                                videoElement.src = videoSrc;
+                                videoElement.addEventListener(
+                                    "loadedmetadata",
+                                    () => {
+                                        videoElement.play();
+                                    }
+                                );
+                            }
+
+                            index = (index + 1) % videos.length;
+                        }
+
+                        videoElement.addEventListener("ended", playNext);
+                        playNext();
+                    });
+            });
+        </script>
+    </body>
+</html>
